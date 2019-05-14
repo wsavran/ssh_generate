@@ -20,9 +20,8 @@ directly from the command line as shown below
        Random Seed: 1
    We want to downsample the entire mesh by a factor of 2.  
    </p>
-   ```
-      ./ssh_generate --d1 16 --hurst 0.05 --st23 5 --seed 1 --l1 150 --dmi 0 --dsfct1 2 -n1 128 -n2 256 -n3 256
- ```
+   
+    ./ssh_generate --d1 16 --hurst 0.05 --st23 5 --seed 1 --l1 150 --dmi 0 --dsfct1 2 -n1 128 -n2 256 -n3 256
 
  <b>Example  2:</b>
    Generate the same mesh as Example 1, but now downsample starting at index 50 by 3 points and starting at index 100 by 9 points.

@@ -43,6 +43,10 @@ void usage() {
 	  printf("\t--n1 Distributions along vertical axis.\n");
 	  printf("\t--n2 Distributions along EW axis.\n");
 	  printf("\t--n3 Distributions along NS axis.\n\n");
+      printf("\t--dmi Depth index to start desampling by dsfct1 (default is no-desampling)\n");
+      printf("\t--dmi2 Depth index to start desampling by dsfct2 (default is no-desampling)\n");
+      printf("\t--dsfct1 Integer downsample factor starting at index dmi (default is 3)\n");
+      printf("\t--dsfct2 Integer downsample factor starting at index dmi2 (default is 9)\n");
 	  //printf("Version: %s\n\n", VERSION);
 
 	  return;
@@ -540,7 +544,7 @@ void fftfreq(int n, double dh, double *freq){
 void downsample_pow3(double n1iso_bigger, double n2iso_bigger, double n3iso_bigger, fftw_complex *insim, fftw_complex *outsim,
 								     double st23, int dwnsmpfct) {
 
-  double df, dfh, *wnj, *wni, *wnk, wncut;
+  double *wnj, *wni, *wnk, wncut;
   fftw_complex *result;
   size_t totalsize;
 	fftw_plan p;
@@ -609,9 +613,11 @@ int main(int argc, char **argv) {
 	double n1 = 100;					// Vert distribs (default 100)
 	double n2 = 100;					// Horizontal distribs EW (default 100)
 	double n3 = 100;					// Horizontal distribs NS (default 100)
-  int dmi = -1;
-  int dmi2 = -1;
-  int dsfct;
+    int dsfct1 = 3;                  // Integer quantity to downsample in layer one
+    int dsfct2 = 9;                  // Integer quantity to downsample in layer two
+    int dmi = -1;                       // Index to start downsampling by depth factor 1
+    int dmi2 = -1;                      // Index to start downsampling by depth factor 2
+    int dsfct;
 
 	double d23, n1iso, n2iso, n3iso;	// Variables to be calculated later on
 	double n1iso_bigger, n1iso_smaller, n2iso_bigger, n2iso_smaller, n3iso_bigger, n3iso_smaller;
@@ -644,6 +650,8 @@ int main(int argc, char **argv) {
 			{ "mesh", required_argument, 0, 'm'},
 			{ "dmi", required_argument, 0, 'z'},
 			{ "dmi2", required_argument, 0, 'o'},
+            { "dsfct1", required_argument, 0, 'g'},
+            { "dsfct2", required_argument, 0, 'j'},
 			{ "help", no_argument, 0, 'h'},
 			{ 0, 0, 0, 0 }
 	};
@@ -654,7 +662,7 @@ int main(int argc, char **argv) {
 
 	// Loop through the available options and set variables.
 	while (1) {
-		nextopt = getopt_long(argc, argv, "m:u:d:hl:s:e:a:b:c:pi", long_options, &option_index);
+		nextopt = getopt_long(argc, argv, "m:u:d:hl:s:e:a:b:c:g:j:pi", long_options, &option_index);
 		if (nextopt == -1) break;
 
 		switch (nextopt) {
@@ -663,6 +671,12 @@ int main(int argc, char **argv) {
 		case 'm':
 			sprintf(mesh_file, "%s", optarg);
 			break;
+        case 'g':
+            dsfct1 = atoi(optarg);
+            break;
+        case 'j':
+            dsfct2 = atoi(optarg);
+            break;
 		case 'u':
 			hurst = atof(optarg);
 			break;
@@ -722,16 +736,21 @@ int main(int argc, char **argv) {
 	printf("\tDistributions East-West: %f\n", n2);
 	printf("\tDistributions North-South: %f\n", n3);
 	printf("\tOutputting to file: %s\n", mesh_file);
-        if (dmi == -1){
-           printf("\tDepth of DM transition zone not set, no downsampling performed\n");
-        }
-        else
-           printf("\tDepth of DM transition zone: %d points\n", dmi);
-        if (dmi2 == -1){
-           printf("\tDepth of second DM transition zone not set.\n");
-        }
-        else
-           printf("\tDepth of second DM transition zone: %d points\n", dmi2);
+    if (dmi == -1){
+       printf("\tDepth of DM transition zone not set, no downsampling performed\n");
+    }
+    else {
+       printf("\tDepth of DM transition zone: %d points\n", dmi);
+       printf("\tDownsampling by %d points\n", dsfct1);
+    }
+    if (dmi2 == -1){
+       printf("\tDepth of second DM transition zone not set.\n");
+    }
+    else {
+       printf("\tDepth of second DM transition zone: %d points\n", dmi2);
+       printf("\tDownsampling by %d points\n", dsfct2);
+    }
+        
 
 	d23 = d1 * st23;
 	n1iso = n1;
@@ -764,14 +783,14 @@ int main(int argc, char **argv) {
 
 	for (iz = 0; iz < n1; iz++) {
 
-                if (iz == dmi || iz == dmi2) {
-                   sim3d_lr = (fftw_complex*) calloc(totalsize, sizeof(fftw_complex));
-                   if (iz == dmi) dsfct = 3;
-                   else if (iz == dmi2) dsfct = 9;
-                   downsample_pow3(n1iso_bigger, n2iso_bigger, n3iso_bigger, sim3d, sim3d_lr, st23, dsfct);
-                   free(sim3d);
-                   sim3d = sim3d_lr;
-                }
+            if (iz == dmi || iz == dmi2) {
+               sim3d_lr = (fftw_complex*) calloc(totalsize, sizeof(fftw_complex));
+               if (iz == dmi) dsfct = dsfct1;
+               else if (iz == dmi2) dsfct = dsfct2;
+               downsample_pow3(n1iso_bigger, n2iso_bigger, n3iso_bigger, sim3d, sim3d_lr, st23, dsfct);
+               free(sim3d);
+               sim3d = sim3d_lr;
+            }
 
 		powxy = mallocHelperFFTW(n3, n2);
 		powx = mallocHelperFFTW(n2, n3);
